@@ -1,0 +1,23 @@
+# Build outputs
+bin/
+build/
+dist/
+mcp2cli
+
+# Go test / coverage artifacts
+*.test
+*.out
+coverage.out
+coverage/
+*.coverprofile
+*.prof
+
+# Logs
+*.log
+
+# Editor / OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
