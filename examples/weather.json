@@ -1,0 +1,18 @@
+{
+  "name": "weather",
+  "server": {
+    "url": "https://example.com/mcp",
+    "transport": "streamable_http",
+    "timeout_seconds": 30
+  },
+  "auth": {
+    "type": "bearer",
+    "token": "${WEATHER_MCP_TOKEN}"
+  },
+  "cli": {
+    "description": "Weather MCP CLI",
+    "include_return_schema_in_help": true,
+    "pretty_json": false
+  }
+}
+
