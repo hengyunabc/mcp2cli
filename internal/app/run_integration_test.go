@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hengyunabc/mcp2cli/internal/shellpath"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -40,7 +41,7 @@ func TestRunDynamicHelpAndInvocation(t *testing.T) {
 
 	t.Run("root help shows dynamic tools", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
-		code := Run(context.Background(), []string{"--config", cfgPath, "--help"}, &stdout, &stderr, "test-version")
+		code := Run(context.Background(), "mcp2cli", []string{"--config", cfgPath, "--help"}, strings.NewReader(""), &stdout, &stderr, "test-version")
 		if code != 0 {
 			t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 		}
@@ -55,7 +56,7 @@ func TestRunDynamicHelpAndInvocation(t *testing.T) {
 
 	t.Run("tool help includes params and return schema", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
-		code := Run(context.Background(), []string{"--config", cfgPath, "cityInfo", "--help"}, &stdout, &stderr, "test-version")
+		code := Run(context.Background(), "mcp2cli", []string{"--config", cfgPath, "cityInfo", "--help"}, strings.NewReader(""), &stdout, &stderr, "test-version")
 		if code != 0 {
 			t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 		}
@@ -76,7 +77,7 @@ func TestRunDynamicHelpAndInvocation(t *testing.T) {
 
 	t.Run("tool invocation returns json", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
-		code := Run(context.Background(), []string{"--config", cfgPath, "cityInfo", "--name", "hk"}, &stdout, &stderr, "test-version")
+		code := Run(context.Background(), "mcp2cli", []string{"--config", cfgPath, "cityInfo", "--name", "hk"}, strings.NewReader(""), &stdout, &stderr, "test-version")
 		if code != 0 {
 			t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
 		}
@@ -96,7 +97,7 @@ func TestRunDynamicHelpAndInvocation(t *testing.T) {
 
 	t.Run("missing required parameter returns code 2", func(t *testing.T) {
 		var stdout, stderr bytes.Buffer
-		code := Run(context.Background(), []string{"--config", cfgPath, "cityInfo"}, &stdout, &stderr, "test-version")
+		code := Run(context.Background(), "mcp2cli", []string{"--config", cfgPath, "cityInfo"}, strings.NewReader(""), &stdout, &stderr, "test-version")
 		if code != 2 {
 			t.Fatalf("exit code = %d, want 2, stderr = %s", code, stderr.String())
 		}
@@ -124,12 +125,127 @@ func TestRunAuthFailureReturnsConnectionCode(t *testing.T) {
 }`, serverURL))
 
 	var stdout, stderr bytes.Buffer
-	code := Run(context.Background(), []string{"--config", cfgPath, "--help"}, &stdout, &stderr, "test-version")
+	code := Run(context.Background(), "mcp2cli", []string{"--config", cfgPath, "--help"}, strings.NewReader(""), &stdout, &stderr, "test-version")
 	if code != 3 {
 		t.Fatalf("exit code = %d, want 3, stderr = %s", code, stderr.String())
 	}
 	if !strings.Contains(strings.ToLower(stderr.String()), "unauthorized") {
 		t.Fatalf("auth failure stderr should mention unauthorized, got: %s", stderr.String())
+	}
+}
+
+func TestRunInstallListRemoveAndWrapperFallback(t *testing.T) {
+	serverURL, shutdown := startTestMCPServer(t, "good-token")
+	defer shutdown()
+
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	t.Setenv("SHELL", "/bin/bash")
+	t.Setenv("PATH", "/usr/bin")
+
+	var stdout, stderr bytes.Buffer
+
+	code := Run(
+		context.Background(),
+		"mcp2cli",
+		[]string{"install", "weather", "--url", serverURL, "--token", "good-token", "--yes"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 0 {
+		t.Fatalf("install exit code = %d, stderr = %s", code, stderr.String())
+	}
+
+	configPath := filepath.Join(homeDir, ".mcp2cli", "configs", "weather.json")
+	wrapperPath := filepath.Join(homeDir, ".mcp2cli", "bin", "weather")
+	rcPath := filepath.Join(homeDir, ".bashrc")
+
+	if _, err := os.Stat(configPath); err != nil {
+		t.Fatalf("config file not found: %v", err)
+	}
+	if _, err := os.Stat(wrapperPath); err != nil {
+		t.Fatalf("wrapper file not found: %v", err)
+	}
+	rcContent, err := os.ReadFile(rcPath)
+	if err != nil {
+		t.Fatalf("read rc file error: %v", err)
+	}
+	if !strings.Contains(string(rcContent), shellpath.PathExportLine) {
+		t.Fatalf("rc file does not contain PATH export line: %s", string(rcContent))
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = Run(
+		context.Background(),
+		wrapperPath,
+		[]string{"--help"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 0 {
+		t.Fatalf("wrapper help exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "cityInfo") {
+		t.Fatalf("wrapper help output should include dynamic tool cityInfo, got: %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = Run(
+		context.Background(),
+		"mcp2cli",
+		[]string{"list"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 0 {
+		t.Fatalf("list exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "weather") || !strings.Contains(stdout.String(), serverURL) {
+		t.Fatalf("list output missing expected values: %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = Run(
+		context.Background(),
+		"mcp2cli",
+		[]string{"install", "weather", "--url", serverURL, "--token", "good-token"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 5 {
+		t.Fatalf("reinstall exit code = %d, want 5, stderr = %s", code, stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = Run(
+		context.Background(),
+		"mcp2cli",
+		[]string{"remove", "weather"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 0 {
+		t.Fatalf("remove exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Fatalf("config should be removed, stat err = %v", err)
+	}
+	if _, err := os.Stat(wrapperPath); !os.IsNotExist(err) {
+		t.Fatalf("wrapper should be removed, stat err = %v", err)
 	}
 }
 

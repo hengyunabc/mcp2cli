@@ -24,43 +24,6 @@ type Runtime struct {
 	Version    string
 }
 
-func NewBootstrapCommand(stdout io.Writer, stderr io.Writer, version string) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "mcp2cli",
-		Short: "MCP to CLI bridge",
-		Long: strings.TrimSpace(`
-MCP to CLI bridge.
-
-Use --config to connect a remote MCP server and dynamically expose tools as CLI subcommands.
-
-Examples:
-  mcp2cli --config weather.json --help
-  mcp2cli --config weather.json cityInfo --help
-  mcp2cli --config weather.json cityInfo --name hk
-`),
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			return cmd.Help()
-		},
-		SilenceUsage:  true,
-		SilenceErrors: true,
-	}
-	cmd.SetOut(stdout)
-	cmd.SetErr(stderr)
-	cmd.Flags().StringP("config", "c", "", "Path to config file")
-	cmd.Flags().Bool("version", false, "Show version")
-	cmd.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Show version",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintln(stdout, version)
-			return err
-		},
-		SilenceUsage:  true,
-		SilenceErrors: true,
-	})
-	return cmd
-}
-
 func NewRootCommand(rt Runtime) (*cobra.Command, error) {
 	commandName := sanitizeCommandName(rt.Config.Name)
 	root := &cobra.Command{

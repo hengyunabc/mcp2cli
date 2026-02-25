@@ -40,22 +40,47 @@ See `examples/weather.json`.
 ./mcp2cli --config examples/weather.json cityInfo --name hk
 ```
 
-## Wrap as a custom command
+## Install wrapper commands (recommended)
 
 ```bash
-alias weather='mcp2cli --config /path/to/weather.json'
+mcp2cli install weather --url https://example.com/mcp --token <token>
+```
+
+This installs:
+
+1. `~/.mcp2cli/bin/weather`
+2. `~/.mcp2cli/configs/weather.json`
+
+Then add `~/.mcp2cli/bin` to PATH:
+
+```bash
+export PATH="$HOME/.mcp2cli/bin:$PATH"
+```
+
+After that:
+
+```bash
 weather --help
 weather cityInfo --help
 weather cityInfo --name hk
 ```
 
-Or install a standalone wrapper command:
+Import from an existing config file:
 
 ```bash
-chmod +x scripts/install-wrapper.sh
-scripts/install-wrapper.sh weather /path/to/weather.json ~/.local/bin
-weather --help
+mcp2cli install weather --from-config /path/to/weather.json
 ```
+
+Manage installed wrappers:
+
+```bash
+mcp2cli list
+mcp2cli remove weather
+```
+
+## Legacy script (compatibility)
+
+`scripts/install-wrapper.sh` is kept for compatibility and now forwards to `mcp2cli install`.
 
 ## Exit codes
 

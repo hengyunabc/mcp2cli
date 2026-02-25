@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/hengyunabc/mcp2cli/internal/home"
 )
 
 const (
@@ -106,7 +109,7 @@ func IncludeReturnSchemaInHelp(cfg Config) bool {
 	return *cfg.CLI.IncludeReturnSchemaInHelp
 }
 
-func ExtractConfigPath(args []string) (string, error) {
+func ExtractConfigPath(args []string, programName string) (string, error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
@@ -137,5 +140,40 @@ func ExtractConfigPath(args []string) (string, error) {
 	if envPath := strings.TrimSpace(os.Getenv("MCP2CLI_CONFIG")); envPath != "" {
 		return envPath, nil
 	}
+
+	if fallbackPath, ok, err := ExpectedConfigPathForProgram(programName); err != nil {
+		return "", err
+	} else if ok {
+		if _, err := os.Stat(fallbackPath); err == nil {
+			return fallbackPath, nil
+		}
+	}
+
 	return "", nil
+}
+
+func ExpectedConfigPathForProgram(programName string) (string, bool, error) {
+	commandName := commandNameFromProgram(programName)
+	if commandName == "" || commandName == "mcp2cli" {
+		return "", false, nil
+	}
+
+	paths, err := home.Resolve("")
+	if err != nil {
+		return "", false, fmt.Errorf("resolve default config directory: %w", err)
+	}
+
+	return filepath.Join(paths.ConfigDir, commandName+".json"), true, nil
+}
+
+func commandNameFromProgram(programName string) string {
+	base := strings.TrimSpace(filepath.Base(programName))
+	if base == "" || base == "." || base == string(filepath.Separator) {
+		return ""
+	}
+	// Handle Windows executable names while keeping other platforms unchanged.
+	if strings.EqualFold(filepath.Ext(base), ".exe") {
+		base = strings.TrimSuffix(base, filepath.Ext(base))
+	}
+	return strings.TrimSpace(base)
 }

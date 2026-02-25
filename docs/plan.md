@@ -153,3 +153,9 @@ Must include:
    1. Added `Makefile` with `build/test/fmt/run/clean` targets.
    2. Added wrapper installer script `scripts/install-wrapper.sh`.
    3. Updated `README.md` with build and wrapper installation usage.
+10. Local installation UX enhancements:
+   1. Added `mcp2cli install/list/remove` bootstrap commands.
+   2. Added managed home layout `~/.mcp2cli/bin` and `~/.mcp2cli/configs`.
+   3. Added argv0-based default config discovery for installed wrapper commands.
+   4. Added PATH guidance with optional shell rc update flow.
+   5. Added install manager + app/config integration tests.
