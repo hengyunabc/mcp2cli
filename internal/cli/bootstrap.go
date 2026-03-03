@@ -24,7 +24,7 @@ func NewBootstrapCommand(stdout io.Writer, stderr io.Writer, stdin io.Reader, ve
 		Long: strings.TrimSpace(`
 MCP to CLI bridge.
 
-Install wrapper commands into ~/.mcp2cli/bin and keep config files in ~/.mcp2cli/configs.
+Install wrapper commands (symlinks to mcp2cli) into ~/.mcp2cli/bin and keep config files in ~/.mcp2cli/configs.
 
 Examples:
   mcp2cli install weather --url https://example.com/mcp --token <token>
@@ -83,7 +83,7 @@ func newInstallCommand(manager *install.Manager, stdin io.Reader, stdout io.Writ
 		Short: "Install a wrapper command into ~/.mcp2cli/bin",
 		Long: strings.TrimSpace(`
 Install wrapper command and config:
-  wrapper -> ~/.mcp2cli/bin/<name>
+  wrapper -> ~/.mcp2cli/bin/<name> (symlink to mcp2cli)
   config  -> ~/.mcp2cli/configs/<name>.json
 
 By default this command refuses to overwrite existing files.

@@ -48,7 +48,7 @@ mcp2cli install weather --url https://example.com/mcp --token <token>
 
 This installs:
 
-1. `~/.mcp2cli/bin/weather`
+1. `~/.mcp2cli/bin/weather` (symlink to `mcp2cli`)
 2. `~/.mcp2cli/configs/weather.json`
 
 Then add `~/.mcp2cli/bin` to PATH:
@@ -64,6 +64,8 @@ weather --help
 weather cityInfo --help
 weather cityInfo --name hk
 ```
+
+When invoked as `weather`, `mcp2cli` uses `os.Args[0]` to automatically load `~/.mcp2cli/configs/weather.json`.
 
 Import from an existing config file:
 

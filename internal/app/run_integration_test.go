@@ -135,6 +135,8 @@ func TestRunAuthFailureReturnsConnectionCode(t *testing.T) {
 }
 
 func TestRunInstallListRemoveAndWrapperFallback(t *testing.T) {
+	requireSymlinkSupport(t)
+
 	serverURL, shutdown := startTestMCPServer(t, "good-token")
 	defer shutdown()
 
@@ -249,6 +251,45 @@ func TestRunInstallListRemoveAndWrapperFallback(t *testing.T) {
 	}
 }
 
+func TestRunWrapperUsesInvokedNameWhenConfigNameMissing(t *testing.T) {
+	requireSymlinkSupport(t)
+
+	serverURL, shutdown := startTestMCPServer(t, "")
+	defer shutdown()
+
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	cfgPath := filepath.Join(homeDir, ".mcp2cli", "configs", "weather.json")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll error: %v", err)
+	}
+	if err := os.WriteFile(cfgPath, []byte(fmt.Sprintf(`{
+  "server": {
+    "url": %q
+  }
+}`, serverURL)), 0o644); err != nil {
+		t.Fatalf("WriteFile error: %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run(
+		context.Background(),
+		"/usr/local/bin/weather",
+		[]string{"--help"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		"test-version",
+	)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Usage:\n  weather") {
+		t.Fatalf("help output should use invoked name weather, got: %s", stdout.String())
+	}
+}
+
 func startTestMCPServer(t *testing.T, token string) (string, func()) {
 	t.Helper()
 
@@ -324,6 +365,20 @@ func startTestMCPServer(t *testing.T, token string) (string, func()) {
 
 	testServer := httptest.NewServer(mux)
 	return testServer.URL + "/mcp", testServer.Close
+}
+
+func requireSymlinkSupport(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target")
+	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile target error: %v", err)
+	}
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
 }
 
 func writeConfig(t *testing.T, content string) string {

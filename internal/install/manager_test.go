@@ -7,7 +7,23 @@ import (
 	"testing"
 )
 
+func requireSymlinkSupport(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target")
+	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile target error: %v", err)
+	}
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink not supported: %v", err)
+	}
+}
+
 func TestManagerInstallListRemove(t *testing.T) {
+	requireSymlinkSupport(t)
+
 	baseDir := filepath.Join(t.TempDir(), ".mcp2cli")
 	manager, err := NewManager(baseDir)
 	if err != nil {
@@ -26,16 +42,29 @@ func TestManagerInstallListRemove(t *testing.T) {
 	if _, err := os.Stat(result.ConfigPath); err != nil {
 		t.Fatalf("config file missing: %v", err)
 	}
-	if _, err := os.Stat(result.WrapperPath); err != nil {
+	info, err := os.Lstat(result.WrapperPath)
+	if err != nil {
 		t.Fatalf("wrapper file missing: %v", err)
 	}
-
-	wrapperContent, err := os.ReadFile(result.WrapperPath)
-	if err != nil {
-		t.Fatalf("ReadFile wrapper error: %v", err)
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("wrapper is not a symlink: mode=%v", info.Mode())
 	}
-	if !strings.Contains(string(wrapperContent), `$HOME/.mcp2cli/configs/weather.json`) {
-		t.Fatalf("unexpected wrapper content: %s", string(wrapperContent))
+
+	gotTarget, err := os.Readlink(result.WrapperPath)
+	if err != nil {
+		t.Fatalf("Readlink wrapper error: %v", err)
+	}
+	wantTarget, err := os.Executable()
+	if err != nil {
+		t.Fatalf("Executable error: %v", err)
+	}
+	wantTarget, err = filepath.Abs(wantTarget)
+	if err != nil {
+		t.Fatalf("Abs error: %v", err)
+	}
+	wantTarget = filepath.Clean(wantTarget)
+	if gotTarget != wantTarget {
+		t.Fatalf("wrapper symlink target = %q, want %q", gotTarget, wantTarget)
 	}
 
 	entries, err := manager.List()
@@ -59,6 +88,8 @@ func TestManagerInstallListRemove(t *testing.T) {
 }
 
 func TestManagerInstallForce(t *testing.T) {
+	requireSymlinkSupport(t)
+
 	baseDir := filepath.Join(t.TempDir(), ".mcp2cli")
 	manager, err := NewManager(baseDir)
 	if err != nil {
@@ -92,6 +123,8 @@ func TestManagerInstallForce(t *testing.T) {
 }
 
 func TestManagerInstallFromConfig(t *testing.T) {
+	requireSymlinkSupport(t)
+
 	baseDir := filepath.Join(t.TempDir(), ".mcp2cli")
 	manager, err := NewManager(baseDir)
 	if err != nil {

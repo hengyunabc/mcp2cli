@@ -58,6 +58,11 @@ func Run(ctx context.Context, programName string, args []string, stdin io.Reader
 		return apperr.CodeConfig
 	}
 
+	invokedName := commandName(programName)
+	if invokedName != "" && invokedName != "mcp2cli" && cfg.Name == config.DefaultName {
+		cfg.Name = invokedName
+	}
+
 	client, err := mcpclient.Connect(ctx, cfg, version)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, err.Error())

@@ -84,6 +84,17 @@ func (m *Manager) Install(opts InstallOptions) (InstallResult, error) {
 		if exists(wrapperPath) {
 			return InstallResult{}, fmt.Errorf("wrapper already exists: %s (use --force to overwrite)", wrapperPath)
 		}
+	} else {
+		if exists(configPath) {
+			if err := os.Remove(configPath); err != nil {
+				return InstallResult{}, fmt.Errorf("remove existing config %q: %w", configPath, err)
+			}
+		}
+		if exists(wrapperPath) {
+			if err := os.Remove(wrapperPath); err != nil {
+				return InstallResult{}, fmt.Errorf("remove existing wrapper %q: %w", wrapperPath, err)
+			}
+		}
 	}
 
 	configContent, err := json.MarshalIndent(cfg, "", "  ")
@@ -96,9 +107,17 @@ func (m *Manager) Install(opts InstallOptions) (InstallResult, error) {
 		return InstallResult{}, fmt.Errorf("write config %q: %w", configPath, err)
 	}
 
-	wrapperContent := buildWrapperContent(name)
-	if err := os.WriteFile(wrapperPath, []byte(wrapperContent), 0o755); err != nil {
-		return InstallResult{}, fmt.Errorf("write wrapper %q: %w", wrapperPath, err)
+	exePath, err := os.Executable()
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("resolve current executable path: %w", err)
+	}
+	exePath, err = filepath.Abs(exePath)
+	if err != nil {
+		return InstallResult{}, fmt.Errorf("resolve absolute executable path %q: %w", exePath, err)
+	}
+	exePath = filepath.Clean(exePath)
+	if err := os.Symlink(exePath, wrapperPath); err != nil {
+		return InstallResult{}, fmt.Errorf("create wrapper symlink %q -> %q: %w", wrapperPath, exePath, err)
 	}
 
 	return InstallResult{
@@ -271,18 +290,11 @@ func buildConfig(name string, opts InstallOptions) (config.Config, error) {
 	return cfg, nil
 }
 
-func buildWrapperContent(name string) string {
-	return fmt.Sprintf(`#!/usr/bin/env bash
-set -euo pipefail
-exec mcp2cli --config "$HOME/.mcp2cli/configs/%s.json" "$@"
-`, name)
-}
-
 func boolPtr(v bool) *bool {
 	return &v
 }
 
 func exists(path string) bool {
-	_, err := os.Stat(path)
+	_, err := os.Lstat(path)
 	return err == nil
 }
