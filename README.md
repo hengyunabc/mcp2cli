@@ -27,6 +27,22 @@ make build
 make test
 ```
 
+## Install binary from GitHub Release
+
+Install latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hengyunabc/mcp2cli/main/scripts/install-release.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hengyunabc/mcp2cli/main/scripts/install-release.sh | VERSION=v0.1.0 bash
+```
+
+The installer can be customized via env vars: `OWNER`, `REPO`, `BINARY`, `VERSION`, `INSTALL_DIR`.
+
 ## Config
 
 See `examples/weather.json`.
