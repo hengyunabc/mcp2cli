@@ -2,7 +2,7 @@
 bin/
 build/
 dist/
-mcp2cli
+/mcp2cli
 
 # Go test / coverage artifacts
 *.test
