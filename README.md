@@ -96,10 +96,6 @@ mcp2cli list
 mcp2cli remove weather
 ```
 
-## Legacy script (compatibility)
-
-`scripts/install-wrapper.sh` is kept for compatibility and now forwards to `mcp2cli install`.
-
 ## Exit codes
 
 1. `0`: success

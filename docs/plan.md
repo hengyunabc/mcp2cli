@@ -151,8 +151,7 @@ Must include:
    5. Verified full test pass via `go test ./...`.
 9. Additional updates by request:
    1. Added `Makefile` with `build/test/fmt/run/clean` targets.
-   2. Added wrapper installer script `scripts/install-wrapper.sh`.
-   3. Updated `README.md` with build and wrapper installation usage.
+   2. Updated `README.md` with build and wrapper installation usage.
 10. Local installation UX enhancements:
    1. Added `mcp2cli install/list/remove` bootstrap commands.
    2. Added managed home layout `~/.mcp2cli/bin` and `~/.mcp2cli/configs`.
