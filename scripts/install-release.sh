@@ -138,7 +138,7 @@ main() {
   checksums_url="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/checksums.txt"
 
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"' EXIT
+  trap 'rm -rf "${tmpdir:-}"' EXIT
 
   archive_file="${tmpdir}/${asset}"
   checksums_file="${tmpdir}/checksums.txt"
