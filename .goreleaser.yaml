@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: mcp2cli
-    main: ./cmd/mcp2cli
+    main: ./cmd/mcp2cli/main.go
     binary: mcp2cli
     env:
       - CGO_ENABLED=0
